@@ -16,6 +16,15 @@ body {
   margin: 33px auto;
 }
 
+.gallery-heading {
+  text-align: right;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  font-weight: bold;
+  color: #000;
+  margin: 45px 14% 30px 0;
+}
+
 .photo-row {
   display: flex;
   align-items: center;

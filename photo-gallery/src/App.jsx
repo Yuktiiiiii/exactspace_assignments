@@ -1,9 +1,10 @@
+
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faThumbsUp } from "@fortawesome/free-solid-svg-icons";
 import "./App.css";
 
-const API_URL = "https://api.openverse.org/v1/images/";
+const API_URL = "https://picsum.photos/v2/list";
 
 function Photo({ photo }) {
   const [likes, setLikes] = useState(0);
@@ -13,7 +14,7 @@ function Photo({ photo }) {
       <img
         className="photo-image"
         src={photo.download_url}
-        alt={photo.title || "Gallery photo"}
+        alt={`Photograph by ${photo.author}`}
         loading="lazy"
       />
 
@@ -26,9 +27,12 @@ function Photo({ photo }) {
           className="like-button"
           onClick={() => setLikes((count) => count + 1)}
           aria-label={`Like photo. ${likes} likes`}
+          type="button"
         >
           <FontAwesomeIcon icon={faThumbsUp} />
-          {likes > 0 && <span className="like-count">{likes}</span>}
+          {likes > 0 && (
+            <span className="like-count">{likes}</span>
+          )}
         </button>
       </div>
     </div>
@@ -45,6 +49,7 @@ function App() {
 
   const sentinelRef = useRef(null);
 
+  // Fetch paginated Picsum photos
   useEffect(() => {
     const controller = new AbortController();
 
@@ -54,25 +59,36 @@ function App() {
 
       try {
         const response = await fetch(
-          `${API_URL}?q=nature&category=photograph&page=${page}&page_size=10`,
+          `${API_URL}?page=${page}`,
           { signal: controller.signal }
         );
 
         if (!response.ok) {
-          throw new Error("Could not load photos. Please try again.");
+          throw new Error(
+            "Could not load photos. Please try again."
+          );
         }
 
         const data = await response.json();
 
-        const newPhotos = data.results.map((photo) => ({
+        // Stop when the API returns an empty page
+        if (!Array.isArray(data) || data.length === 0) {
+          setHasMore(false);
+          return;
+        }
+
+        const newPhotos = data.map((photo) => ({
           id: photo.id,
-          title: photo.title,
-          author: photo.creator || "Unknown",
-          download_url: photo.url || photo.thumbnail,
+          author: photo.author,
+          download_url: photo.download_url,
         }));
 
+        // Append new photos without duplicates
         setPhotos((previous) => {
-          const existingIds = new Set(previous.map((photo) => photo.id));
+          const existingIds = new Set(
+            previous.map((photo) => photo.id)
+          );
+
           const uniquePhotos = newPhotos.filter(
             (photo) => !existingIds.has(photo.id)
           );
@@ -80,7 +96,7 @@ function App() {
           return [...previous, ...uniquePhotos];
         });
 
-        setHasMore(page < data.page_count && newPhotos.length > 0);
+        setHasMore(newPhotos.length > 0);
       } catch (err) {
         if (err.name !== "AbortError") {
           setError(err.message);
@@ -97,10 +113,13 @@ function App() {
     return () => controller.abort();
   }, [page, retryCount]);
 
+  // Infinite scrolling
   useEffect(() => {
     const sentinel = sentinelRef.current;
 
-    if (!sentinel || loading || !hasMore || error) return;
+    if (!sentinel || loading || !hasMore || error) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -109,7 +128,9 @@ function App() {
           setPage((currentPage) => currentPage + 1);
         }
       },
-      { rootMargin: "200px" }
+      {
+        rootMargin: "200px",
+      }
     );
 
     observer.observe(sentinel);
@@ -117,28 +138,51 @@ function App() {
     return () => observer.disconnect();
   }, [loading, hasMore, error, photos.length]);
 
+  // Retry failed requests
+  const handleRetry = () => {
+    setRetryCount((count) => count + 1);
+  };
+
   return (
     <main className="gallery-container">
+      <h1 className="gallery-heading">Photo gallery</h1>
+
+      {/* Photo List */}
       {photos.map((photo) => (
         <Photo key={photo.id} photo={photo} />
       ))}
 
-      {loading && <p className="status-message">Loading photos...</p>}
+      {/* Loading Indicator */}
+      {loading && (
+        <p className="status-message">
+          Loading photos...
+        </p>
+      )}
 
+      {/* Error Message */}
       {error && (
         <div className="status-message">
           <p>{error}</p>
-          <button onClick={() => setRetryCount((count) => count + 1)}>
+
+          <button onClick={handleRetry} type="button">
             Retry
           </button>
         </div>
       )}
 
+      {/* End of Gallery */}
       {!hasMore && photos.length > 0 && (
-        <p className="status-message">No more photos.</p>
+        <p className="status-message">
+          No more photos.
+        </p>
       )}
 
-      <div ref={sentinelRef} className="scroll-sentinel" />
+      {/* Infinite Scroll Trigger */}
+      <div
+        ref={sentinelRef}
+        className="scroll-sentinel"
+      />
+
     </main>
   );
 }
