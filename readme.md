@@ -11,7 +11,7 @@ A React-based photo gallery featuring:
 - Infinite scrolling
 - Image cards
 - Like counter
-- For this assignment, i noticed that during development, the original image source (Picsum Photos) was giving connectivity issues, including request timeouts and server errors, and upon searching more about this, I found that the website picsum photos is down and isnt working. Hence, I used Openverse API for getting the images, as that was the closest to the original given website that I could find. It still follows the functionalities given in the question to fetch images from that website and display authors, and to go to the next page and load more photos from there on the photo gallery app that I built. I hope you consider this.
+  ![Photo Gallery](Results/Screenshots/Photo-gallery.png)
 
 
 ### 2. Team Chat
